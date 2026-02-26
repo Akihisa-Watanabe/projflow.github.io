@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ProjFlow: Projection Sampling with Flow Matching for Zero-Shot Exact Spatial Motion Control</title>
+  <link rel="icon" type="image/png" href="icons/fav.png">
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Optional: Inter font (falls back gracefully) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --pf-blue:#007aff;
+      --pf-blue-rgb:0,122,255;
+      --pf-teal:#5ac8fa;
+      --pf-teal-rgb:90,200,250;
+      --pf-orange:#ff9f0a;
+      --pf-ink:#1c1c1e;
+      --pf-text:#1d1d1f;
+      --pf-muted:#6e6e73;
+      --pf-border:#d2d2d7;
+      --pf-surface:#ffffff;
+      --pf-bg:#f5f5f7;
+      --pf-code:#1c1c1e;
+      --pf-pill:#1c1c1e;
+      --pf-pill-hover:#2c2c2e;
+      --hero-type-scale:0.9;
+    }
+
+    body{
+      font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:var(--pf-bg);
+      color:var(--pf-text);
+      line-height:1.65;
+    }
+
+    a{color:var(--pf-blue); text-decoration:none;}
+    a:hover{text-decoration:underline;}
+
+    .navbar{
+      backdrop-filter:saturate(180%) blur(10px);
+      background:rgba(245,245,247,.85) !important;
+      border-bottom:1px solid rgba(210,210,215,.85);
+    }
+    .navbar-brand{
+      font-weight:700;
+      letter-spacing:.2px;
+    }
+    .nav-link{color:var(--pf-text);}
+    .nav-link:hover{color:var(--pf-blue);}
+
+    .hero{
+      padding:4.5rem 0 .55rem;
+      background:transparent;
+    }
+
+    .eyebrow{
+      display:inline-flex;
+      gap:.5rem;
+      align-items:center;
+      font-size:.85rem;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color:var(--pf-muted);
+    }
+    .eyebrow .dot{
+      width:.5rem;height:.5rem;border-radius:999px;
+      background:var(--pf-orange);
+      display:inline-block;
+    }
+
+    h1{
+      font-size:clamp(2.0rem, 3.4vw, 3.0rem);
+      font-weight:800;
+      letter-spacing:-.02em;
+      margin:.75rem 0 1rem;
+    }
+    .hero-title{
+      font-size:clamp(
+        calc(1.5rem * var(--hero-type-scale)),
+        calc(2.7vw * var(--hero-type-scale)),
+        calc(2.7rem * var(--hero-type-scale))
+      );
+      line-height:1.15;
+      margin:.75rem 0 1.1rem;
+    }
+    .hero-title-line{
+      display:block;
+    }
+    .hero-center{
+      max-width:1100px;
+      margin:0 auto;
+      text-align:center;
+    }
+    .hero-authors{
+      font-size:clamp(
+        calc(1.0rem * var(--hero-type-scale)),
+        calc(1.55vw * var(--hero-type-scale)),
+        calc(1.65rem * var(--hero-type-scale))
+      );
+      line-height:1.35;
+      margin:.25rem auto 0;
+      color:var(--pf-text);
+      max-width:980px;
+    }
+    .hero-authors a{
+      color:var(--pf-blue);
+      text-decoration:none;
+      font-weight:500;
+    }
+    .hero-authors a:hover{
+      text-decoration:underline;
+    }
+    .hero-affiliations{
+      font-size:clamp(
+        calc(.95rem * var(--hero-type-scale)),
+        calc(1.25vw * var(--hero-type-scale)),
+        calc(1.4rem * var(--hero-type-scale))
+      );
+      color:var(--pf-muted);
+      margin-top:.35rem;
+    }
+    .hero-venue{
+      margin-top:.6rem;
+      font-size:clamp(
+        calc(1.15rem * var(--hero-type-scale)),
+        calc(1.8vw * var(--hero-type-scale)),
+        calc(1.9rem * var(--hero-type-scale))
+      );
+      font-weight:700;
+      color:var(--pf-ink);
+    }
+    .hero-actions{
+      margin-top:.65rem;
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:center;
+      gap:calc(.7rem * var(--hero-type-scale));
+    }
+    .hero-pill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:.55rem;
+      padding:calc(.6rem * var(--hero-type-scale)) calc(1.2rem * var(--hero-type-scale));
+      border-radius:999px;
+      font-size:calc(1.15rem * var(--hero-type-scale));
+      font-weight:500;
+      color:#fff;
+      background:var(--pf-pill);
+      text-decoration:none;
+      border:1px solid var(--pf-pill);
+      min-width:calc(132px * var(--hero-type-scale));
+      transition:transform .16s ease, background .16s ease;
+    }
+    .hero-pill:hover{
+      color:#fff;
+      background:var(--pf-pill-hover);
+      text-decoration:none;
+      transform:translateY(-1px);
+    }
+    .hero-pill-icon{
+      width:calc(.9rem * var(--hero-type-scale));
+      height:calc(.9rem * var(--hero-type-scale));
+      display:block;
+      filter:invert(1);
+    }
+
+    .subtitle{
+      font-size:1.1rem;
+      color:var(--pf-muted);
+      max-width:52rem;
+    }
+
+    .btn-primary{
+      background:var(--pf-blue);
+      border-color:var(--pf-blue);
+    }
+    .btn-outline-primary{
+      border-color:rgba(var(--pf-blue-rgb),.35);
+      color:var(--pf-blue);
+    }
+    .btn-outline-primary:hover{
+      background:rgba(var(--pf-blue-rgb),.08);
+      border-color:rgba(var(--pf-blue-rgb),.35);
+      color:var(--pf-blue);
+    }
+
+    .badge-soft{
+      background:rgba(var(--pf-blue-rgb),.08);
+      border:1px solid rgba(var(--pf-blue-rgb),.18);
+      color:var(--pf-blue);
+      font-weight:600;
+    }
+
+    .section{
+      padding:4rem 0;
+    }
+    #abstract.section{
+      padding:.6rem 0 1.25rem;
+    }
+    .abstract-text{
+      margin:0;
+      color:var(--pf-text);
+    }
+    #demos.section{
+      padding-top:.9rem;
+      padding-bottom:1.25rem;
+    }
+    .section-title{
+      font-weight:700;
+      letter-spacing:-.01em;
+      margin-bottom:.5rem;
+    }
+    .section-lead{
+      color:var(--pf-muted);
+      max-width:58rem;
+      margin-bottom:1.5rem;
+    }
+
+    .card{
+      border:1px solid rgba(210,210,215,.85);
+      border-radius:18px;
+      box-shadow:0 14px 30px rgba(28,28,30,.06);
+    }
+    .card .card-title{
+      font-weight:700;
+      margin-bottom:.35rem;
+    }
+    .kpi{
+      background:var(--pf-surface);
+      border:1px solid rgba(210,210,215,.85);
+      border-radius:18px;
+      padding:1.1rem 1.2rem;
+      box-shadow:0 14px 30px rgba(28,28,30,.06);
+      height:100%;
+    }
+    .kpi .kpi-label{
+      text-transform:uppercase;
+      letter-spacing:.14em;
+      font-size:.78rem;
+      color:var(--pf-muted);
+      margin-bottom:.25rem;
+    }
+    .kpi .kpi-value{
+      font-weight:800;
+      font-size:1.25rem;
+      letter-spacing:-.01em;
+      color:var(--pf-ink);
+      margin-bottom:.25rem;
+    }
+    .kpi .kpi-note{color:var(--pf-muted); margin:0;}
+
+    .figure{
+      background:var(--pf-surface);
+      border:1px solid rgba(210,210,215,.85);
+      border-radius:18px;
+      padding:1rem;
+      box-shadow:0 14px 30px rgba(28,28,30,.06);
+    }
+    .figure img{
+      width:100%;
+      height:auto;
+      border-radius:12px;
+      border:1px solid rgba(210,210,215,.85);
+    }
+    .figure .caption{
+      margin-top:.75rem;
+      color:var(--pf-muted);
+      font-size:.95rem;
+    }
+
+    video{
+      width:100%;
+      height:auto;
+      border-radius:14px;
+      background:#000;
+      border:1px solid rgba(210,210,215,.8);
+    }
+
+    .demo-card{
+      background:#1c1c1e;
+      color:#f5f5f7;
+      border:none;
+      border-radius:20px;
+      overflow:hidden;
+      box-shadow:0 24px 50px rgba(28,28,30,.2);
+    }
+    .demo-card .demo-meta{
+      padding:.9rem .85rem .8rem;
+    }
+    .demo-card .demo-kicker{
+      letter-spacing:.02em;
+      font-size:.95rem;
+      font-weight:600;
+      color:#64d2ff;
+      margin-bottom:.35rem;
+    }
+    .demo-card .demo-title{
+      font-weight:700;
+      margin:0 0 .35rem;
+      font-size:1.05rem;
+    }
+    .demo-card .demo-desc{
+      margin:0;
+      color:#d1d1d6;
+      font-size:clamp(.62rem, .72vw, .9rem);
+      line-height:1.25;
+      letter-spacing:-.005em;
+      white-space:nowrap;
+    }
+    .demo-card video{border-radius:0; border:none;}
+
+    .method-step{
+      display:flex;
+      gap:.8rem;
+      align-items:flex-start;
+    }
+    .method-step .step-num{
+      width:2rem;
+      height:2rem;
+      border-radius:999px;
+      background:rgba(var(--pf-blue-rgb),.1);
+      border:1px solid rgba(var(--pf-blue-rgb),.25);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:800;
+      color:var(--pf-blue);
+      flex:0 0 auto;
+    }
+    .method-step .step-text strong{
+      display:block;
+      font-weight:800;
+      margin-bottom:.15rem;
+    }
+    .method-step .step-text span{color:var(--pf-muted);}
+
+    pre{
+      background:var(--pf-code);
+      color:#f5f5f7;
+      border-radius:16px;
+      padding:1rem 1.1rem;
+      border:1px solid rgba(255,255,255,.14);
+      overflow:auto;
+      margin:0;
+    }
+    code{color:inherit;}
+
+    footer{
+      padding:2.5rem 0;
+      color:var(--pf-muted);
+      border-top:1px solid rgba(210,210,215,.85);
+      background:var(--pf-surface);
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Hero -->
+  <header id="top" class="hero">
+    <div class="container-xxl px-4 px-lg-5">
+      <div class="row g-4 align-items-center">
+        <div class="col-12">
+          <div class="hero-center">
+          <h1 class="hero-title">
+            <span class="hero-title-line">ProjFlow: Projection Sampling with Flow Matching for</span>
+            <span class="hero-title-line">Zero-Shot Exact Spatial Motion Control</span>
+          </h1>
+          <div class="hero-authors">
+            <a href="https://akihisa-watanabe.github.io/" target="_blank" rel="noopener">Akihisa Watanabe</a><sup>1</sup>, <a href="https://yu1ut.com/" target="_blank" rel="noopener">Qing Yu</a><sup>2</sup>, <a href="https://esslab.jp/~ess/" target="_blank" rel="noopener">Edgar Simo-Serra</a><sup>1</sup>, <a href="https://kfworks.com/" target="_blank" rel="noopener">Kent Fujiwara</a><sup>2</sup>
+          </div>
+          <div class="hero-affiliations">
+            <sup>1</sup>Waseda University, <sup>2</sup>LY Corporation
+          </div>
+          <div class="hero-venue">CVPR 2026</div>
+          <div class="hero-actions">
+            <a class="hero-pill" href="assets/paper.pdf" target="_blank" rel="noopener"><img class="hero-pill-icon" src="assets/icons/arxiv.svg" alt="" aria-hidden="true">Paper</a>
+            <a class="hero-pill" href="#" target="_blank" rel="noopener"><img class="hero-pill-icon" src="assets/icons/github.svg" alt="" aria-hidden="true">Code</a>
+            <a class="hero-pill" href="#citation"><img class="hero-pill-icon" src="assets/icons/bibtex.svg" alt="" aria-hidden="true">BibTeX</a>
+          </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Demos / teaser -->
+  <section id="demos" class="section">
+    <div class="container-xxl px-4 px-lg-5">
+      <p class="section-lead mb-3 mx-auto">
+        TL;DR:<br>Achieving precise control over where a character moves in space typically requires either task-specific retraining or costly optimization during inference. We introduce a zero-shot flow-matching sampler that generates human motion and exactly matches given spatial targets without additional training or optimization. See the demo below for representative results.
+      </p>
+      <div class="row g-3">
+        <div class="col-xl-3 col-md-6">
+          <div class="demo-card">
+            <video controls autoplay muted loop playsinline preload="metadata">
+              <source src="assets/teaser/follow.mp4" type="video/mp4">
+            </video>
+            <div class="demo-meta">
+              <div class="demo-kicker">(A) Follow a joint path</div>
+              <p class="demo-desc">Exact trajectory following for a selected joint.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="demo-card">
+            <video controls autoplay muted loop playsinline preload="metadata">
+              <source src="assets/teaser/lift.mp4" type="video/mp4">
+            </video>
+            <div class="demo-meta">
+              <div class="demo-kicker">(B) Lift 2D cues to 3D</div>
+              <p class="demo-desc">Exact 2D-to-3D lifting under a known camera.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="demo-card">
+            <video controls autoplay muted loop playsinline preload="metadata">
+              <source src="assets/teaser/carry.mp4" type="video/mp4">
+            </video>
+            <div class="demo-meta">
+              <div class="demo-kicker">(C) Keep a fixed offset</div>
+              <p class="demo-desc">Maintain relative position between joints (e.g., wrists).</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="demo-card">
+            <video controls autoplay muted loop playsinline preload="metadata" data-force-loop>
+              <source src="assets/teaser/loop.mp4" type="video/mp4">
+            </video>
+            <div class="demo-meta">
+              <div class="demo-kicker">(D) Seamless loop closure</div>
+              <p class="demo-desc">Match start/end poses to generate a clean loop.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Abstract -->
+  <section id="abstract" class="section">
+    <div class="container-xxl px-4 px-lg-5">
+      <div class="row justify-content-center">
+        <div class="col-xl-10">
+          <article class="card p-4">
+            <h2 class="section-title mb-3">Abstract</h2>
+            <p class="abstract-text">
+              Generating human motion with precise spatial control is a challenging problem. Existing approaches often require task-specific training or slow optimization, and enforcing hard constraints frequently disrupts motion naturalness. Building on the observation that many animation tasks can be formulated as a linear inverse problem, we introduce <strong>ProjFlow</strong>, a training-free sampler that achieves zero-shot, exact satisfaction of linear spatial constraints while preserving motion realism. Our key advance is a novel kinematics-aware metric that encodes skeletal topology. This metric allows the sampler to enforce hard constraints by distributing corrections coherently across the entire skeleton, avoiding the unnatural artifacts of naive projection. Furthermore, for sparse inputs, such as filling in long gaps between a few keyframes, we introduce a time-varying formulation using pseudo-observations that fade during sampling. Extensive experiments on representative applications, motion inpainting, and 2D-to-3D lifting, demonstrate that ProjFlow achieves exact constraint satisfaction and matches or improves realism over zero-shot baselines, while remaining competitive with training-based controllers.
+            </p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trajectory control -->
+  <section id="trajectory" class="section" style="background:var(--pf-surface);">
+    <div class="container-xxl px-4 px-lg-5">
+      <h2 class="section-title">Results: Trajectory Control (Qualitative Comparisons)</h2>
+      <p class="section-lead">
+        Qualitative results for trajectory control. Each example fixes a target trajectory for one or more joints. We show three methods under the same prompt and control signal: <strong>OmniControl</strong>, <strong>MaskControl</strong>, and <strong>ProjFlow (ours)</strong>.
+      </p>
+      <div class="d-flex flex-column gap-4 mt-4">
+        <article class="card p-4">
+          <div class="text-uppercase small" style="letter-spacing:.14em;color:var(--pf-muted);">Anchor</div>
+          <h3 class="h5 mt-1">Pelvis tracking</h3>
+          <p class="text-muted mb-3">Prompt: "a person runs forward in an S path"</p>
+          <div class="row g-3">
+            <div class="col-md-4"><div class="card p-3 h-100"><div class="card-title">OmniControl</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/pelivs/omnicontrol.mp4" type="video/mp4"></video></div></div>
+            <div class="col-md-4"><div class="card p-3 h-100"><div class="card-title">MaskControl</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/pelivs/maskcontrol.mp4" type="video/mp4"></video></div></div>
+            <div class="col-md-4"><div class="card p-3 h-100 border-primary"><div class="card-title">ProjFlow (Ours)</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/pelivs/projflow.mp4" type="video/mp4"></video></div></div>
+          </div>
+        </article>
+
+        <article class="card p-4">
+          <div class="text-uppercase small" style="letter-spacing:.14em;color:var(--pf-muted);">Anchor</div>
+          <h3 class="h5 mt-1">Head tracking</h3>
+          <p class="text-muted mb-3">Prompt: "a person jumps and kicks a football in the air with their head"</p>
+          <div class="row g-3">
+            <div class="col-md-4"><div class="card p-3 h-100"><div class="card-title">OmniControl</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/head/omnicontrol.mp4" type="video/mp4"></video></div></div>
+            <div class="col-md-4"><div class="card p-3 h-100"><div class="card-title">MaskControl</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/head/maskcontrol.mp4" type="video/mp4"></video></div></div>
+            <div class="col-md-4"><div class="card p-3 h-100 border-primary"><div class="card-title">ProjFlow (Ours)</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/head/projflow.mp4" type="video/mp4"></video></div></div>
+          </div>
+        </article>
+
+        <article class="card p-4">
+          <div class="text-uppercase small" style="letter-spacing:.14em;color:var(--pf-muted);">Anchor</div>
+          <h3 class="h5 mt-1">Left-hand tracking</h3>
+          <p class="text-muted mb-3">Prompt: "the person is boxing with their left hand and throws multiple punches"</p>
+          <div class="row g-3">
+            <div class="col-md-4"><div class="card p-3 h-100"><div class="card-title">OmniControl</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/lefthand/omnicontrol.mp4" type="video/mp4"></video></div></div>
+            <div class="col-md-4"><div class="card p-3 h-100"><div class="card-title">MaskControl</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/lefthand/maskcontrol.mp4" type="video/mp4"></video></div></div>
+            <div class="col-md-4"><div class="card p-3 h-100 border-primary"><div class="card-title">ProjFlow (Ours)</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/lefthand/projflow.mp4" type="video/mp4"></video></div></div>
+          </div>
+        </article>
+
+        <article class="card p-4">
+          <div class="text-uppercase small" style="letter-spacing:.14em;color:var(--pf-muted);">Anchor</div>
+          <h3 class="h5 mt-1">Right-hand tracking</h3>
+          <p class="text-muted mb-3">Prompt: "a person puts hands on the armrest"</p>
+          <div class="row g-3">
+            <div class="col-md-4"><div class="card p-3 h-100"><div class="card-title">OmniControl</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/righthand/omnicontrol.mp4" type="video/mp4"></video></div></div>
+            <div class="col-md-4"><div class="card p-3 h-100"><div class="card-title">MaskControl</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/righthand/maskcontrol.mp4" type="video/mp4"></video></div></div>
+            <div class="col-md-4"><div class="card p-3 h-100 border-primary"><div class="card-title">ProjFlow (Ours)</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/righthand/projflow.mp4" type="video/mp4"></video></div></div>
+          </div>
+        </article>
+
+        <article class="card p-4">
+          <div class="text-uppercase small" style="letter-spacing:.14em;color:var(--pf-muted);">Anchor</div>
+          <h3 class="h5 mt-1">Left-foot tracking</h3>
+          <p class="text-muted mb-3">Prompt: "a person stands with both feet on the ground, kicks once with his left foot"</p>
+          <div class="row g-3">
+            <div class="col-md-4"><div class="card p-3 h-100"><div class="card-title">OmniControl</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/leftfoot/omnicontrol.mp4" type="video/mp4"></video></div></div>
+            <div class="col-md-4"><div class="card p-3 h-100"><div class="card-title">MaskControl</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/leftfoot/maskcontrol.mp4" type="video/mp4"></video></div></div>
+            <div class="col-md-4"><div class="card p-3 h-100 border-primary"><div class="card-title">ProjFlow (Ours)</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/leftfoot/projflow.mp4" type="video/mp4"></video></div></div>
+          </div>
+        </article>
+
+        <article class="card p-4">
+          <div class="text-uppercase small" style="letter-spacing:.14em;color:var(--pf-muted);">Anchor</div>
+          <h3 class="h5 mt-1">Right-foot tracking</h3>
+          <p class="text-muted mb-3">Prompt: "a person side steps left and right"</p>
+          <div class="row g-3">
+            <div class="col-md-4"><div class="card p-3 h-100"><div class="card-title">OmniControl</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/rightfoot/omnicontrol.mp4" type="video/mp4"></video></div></div>
+            <div class="col-md-4"><div class="card p-3 h-100"><div class="card-title">MaskControl</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/rightfoot/maskcontrol.mp4" type="video/mp4"></video></div></div>
+            <div class="col-md-4"><div class="card p-3 h-100 border-primary"><div class="card-title">ProjFlow (Ours)</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/rightfoot/projflow.mp4" type="video/mp4"></video></div></div>
+          </div>
+        </article>
+
+        <article class="card p-4">
+          <div class="text-uppercase small" style="letter-spacing:.14em;color:var(--pf-muted);">Anchors</div>
+          <h3 class="h5 mt-1">Multi-joint tracking (arc)</h3>
+          <p class="text-muted mb-3">Prompt: "a person crosses their arms for chest fly"</p>
+          <div class="row g-3">
+            <div class="col-md-4"><div class="card p-3 h-100"><div class="card-title">OmniControl</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/multi_joints/arc/omnicontrol.mp4" type="video/mp4"></video></div></div>
+            <div class="col-md-4"><div class="card p-3 h-100"><div class="card-title">MaskControl</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/multi_joints/arc/maskcontrol.mp4" type="video/mp4"></video></div></div>
+            <div class="col-md-4"><div class="card p-3 h-100 border-primary"><div class="card-title">ProjFlow (Ours)</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/multi_joints/arc/projflow.mp4" type="video/mp4"></video></div></div>
+          </div>
+          <p class="text-muted mt-3 mb-0">Control signal: circular-arc trajectories for both hands and the pelvis.</p>
+        </article>
+
+        <article class="card p-4">
+          <div class="text-uppercase small" style="letter-spacing:.14em;color:var(--pf-muted);">Anchors</div>
+          <h3 class="h5 mt-1">Multi-joint tracking (S-shaped)</h3>
+          <p class="text-muted mb-3">Prompt: "a person snakes forward while the right hand waves up and down"</p>
+          <div class="row g-3">
+            <div class="col-md-4"><div class="card p-3 h-100"><div class="card-title">OmniControl</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/multi_joints/sin/omnicontrol.mp4" type="video/mp4"></video></div></div>
+            <div class="col-md-4"><div class="card p-3 h-100"><div class="card-title">MaskControl</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/multi_joints/sin/maskcontrol.mp4" type="video/mp4"></video></div></div>
+            <div class="col-md-4"><div class="card p-3 h-100 border-primary"><div class="card-title">ProjFlow (Ours)</div><video controls autoplay muted loop playsinline preload="metadata"><source src="assets/trajectory-follow/multi_joints/sin/projflow.mp4" type="video/mp4"></video></div></div>
+          </div>
+          <p class="text-muted mt-3 mb-0">Control signal: S-shaped trajectories for the pelvis and right hand.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2D-to-3D -->
+  <section id="lift" class="section">
+    <div class="container-xxl px-4 px-lg-5">
+      <h2 class="section-title">2D-to-3D reconstruction</h2>
+      <p class="section-lead">
+        Input: an initial 2D pose plus a 2D joint trajectory under a known orthographic camera. ProjFlow enforces the projection constraints exactly while producing a coherent 3D motion consistent with the text prompt.
+      </p>
+
+      <div class="row g-3">
+        <div class="col-lg-6">
+          <div class="card p-3 h-100">
+            <div class="card-title">Sketch2Anim</div>
+            <video controls autoplay muted loop playsinline preload="metadata">
+              <source src="assets/2d-3d-lift/sketch2anim.mp4" type="video/mp4">
+            </video>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="card p-3 h-100 border-primary">
+            <div class="card-title">ProjFlow (Ours)</div>
+            <video controls autoplay muted loop playsinline preload="metadata">
+              <source src="assets/2d-3d-lift/projflow.mp4" type="video/mp4">
+            </video>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Citation -->
+  <section id="citation" class="section">
+    <div class="container-xxl px-4 px-lg-5">
+      <h2 class="section-title">Citation</h2>
+      <pre><code>@inproceedings{projflow2026,
+  title     = {ProjFlow: Projection Sampling with Flow Matching for Zero-Shot Exact Spatial Motion Control},
+  author    = {Akihisa Watanabe and Qing Yu and Edgar Simo-Serra and Kent Fujiwara},
+  booktitle = {CVPR},
+  year      = {2026}
+}</code></pre>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container-xxl px-4 px-lg-5">
+      <div class="d-flex flex-column flex-md-row justify-content-between gap-2">
+        <div>ProjFlow Project Page</div>
+        <!-- <div class="text-md-end">Built for supplementary visualization and comparisons.</div> -->
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('video[data-force-loop]').forEach(video => {
+        video.addEventListener('ended', () => {
+          video.currentTime = 0;
+          video.play();
+        });
+      });
+    });
+  </script>
+</body>
+</html>
