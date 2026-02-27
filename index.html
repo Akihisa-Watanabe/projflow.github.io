@@ -223,11 +223,18 @@
       max-width:58rem;
       margin-bottom:1.5rem;
     }
+    #demos .section-lead{
+      font-size:1.1rem;
+      line-height:1.65;
+    }
 
     .card{
       border:1px solid rgba(210,210,215,.85);
       border-radius:18px;
       box-shadow:0 14px 30px rgba(28,28,30,.06);
+    }
+    #abstract .card{
+      box-shadow:none;
     }
     .card .card-title{
       font-weight:700;
@@ -290,7 +297,10 @@
       border:none;
       border-radius:20px;
       overflow:hidden;
-      box-shadow:0 24px 50px rgba(28,28,30,.2);
+      box-shadow:none;
+    }
+    .card.p-3.h-100{
+      box-shadow:none;
     }
     .demo-card .demo-meta{
       padding:.9rem .85rem .8rem;
@@ -396,7 +406,7 @@
   <section id="demos" class="section">
     <div class="container-xxl px-4 px-lg-5">
       <p class="section-lead mb-3 mx-auto">
-        TL;DR:<br>Achieving precise control over where a character moves in space typically requires either task-specific retraining or costly optimization during inference. We introduce a zero-shot flow-matching sampler that generates human motion and exactly matches given spatial targets without additional training or optimization. See the demo below for representative results.
+        We introduce a zero-shot flow-matching sampler that generates 3D human motion that exactly matches given spatial targets without additional training or optimization.
       </p>
       <div class="row g-3">
         <div class="col-xl-3 col-md-6">
